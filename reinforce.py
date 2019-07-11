@@ -2,6 +2,7 @@ from keras.layers import Dense, Input
 from keras.models import Model
 from keras.optimizers import Adam
 from keras.utils import np_utils
+from keras.regularizers import l2
 import gym
 import numpy as np
 import random
@@ -9,7 +10,7 @@ import keras.backend as K
 from keras.layers.core import Lambda
 import plotting
 
-EPISODES_TO_TRAIN = 20
+EPISODES_TO_TRAIN = 5
 
 env = gym.make("Taxi-v2").env
 
@@ -35,9 +36,9 @@ def calc_qvals(rewards, gamma):
     return list(reversed(res))
 
 inputs = Input(shape=(1,))
-x = Dense(128, activation='relu', kernel_initializer='zero')(inputs)
-x = Dense(128, activation='relu', kernel_initializer='zero')(x)
-predictions = Dense(env.action_space.n, activation='softmax', kernel_initializer='zero')(x)
+x = Dense(256, activation='relu', kernel_initializer='zero', kernel_regularizer=l2(0.001))(inputs)
+#x = Dense(256, activation='relu', kernel_initializer='zero', kernel_regularizer=l2(0.001))(x)
+predictions = Dense(env.action_space.n, activation='softmax', kernel_initializer='zero', kernel_regularizer=l2(0.001))(x)
 
 model = Model(inputs, predictions)
 
@@ -48,8 +49,8 @@ done_episodes = 0
 batch_episodes = 0
 batch_states, batch_actions, batch_qvals = [], [], []
 cur_rewards = []
-episodes = 100
-gamma = 0.6
+episodes = 20
+gamma = 1
 
 stats = plotting.EpisodeStats(
         episode_lengths=np.zeros(episodes),
@@ -57,15 +58,16 @@ stats = plotting.EpisodeStats(
 
 for i in range(1, episodes):
     state = env.reset()
-
+    state = state / env.observation_space.n
     epochs, penalties, reward, = 0, 0, 0
     done = False
 
 
     while not done:
 
-        action = np.random.choice([a for a in range(env.action_space.n)], p=model.predict([int(state)]).squeeze())
+        action = np.random.choice([a for a in range(env.action_space.n)], p=model.predict([state]).squeeze())
         next_state, reward, done, info = env.step(action)
+        next_state = next_state / env.observation_space.n
         batch_states.append(state)
         batch_actions.append(action)
         cur_rewards.append(reward)
@@ -88,11 +90,15 @@ for i in range(1, episodes):
         continue
 
     y = np_utils.to_categorical(batch_actions, env.action_space.n)
-    model.compile(optimizer = Adam(), loss = custom_loss(batch_qvals, batch_states))
-    model.fit(x=np.array(batch_states).reshape(-1,1), y= np.array(y).reshape(-1,6), batch_size=len(batch_states), epochs=3)
+    model.compile(optimizer = Adam(lr=0.0001), loss = custom_loss(batch_qvals, batch_states))
+    model.fit(x=np.array(batch_states).reshape(-1,1), y= np.array(y).reshape(-1,6), batch_size=len(batch_states), epochs=100, verbose = 0)
     batch_episodes = 0
     batch_states.clear()
     batch_actions.clear()
     batch_qvals.clear()
 
+
 plotting.plot_episode_stats(stats)
+
+np.random.choice([a for a in range(env.action_space.n)], p=model.predict([int(state)]).squeeze())
+model.predict([0.1,0.2,0.3,0.35,0.99]).squeeze()
