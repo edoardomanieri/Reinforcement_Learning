@@ -10,9 +10,9 @@ import keras.backend as K
 from keras.layers.core import Lambda
 import plotting
 
-EPISODES_TO_TRAIN = 10
+EPISODES_TO_TRAIN = 5
 TOTAL_EPISODES = 10000
-ENTROPY_BETA = 0.001
+ENTROPY_BETA = 0.01
 
 env = gym.make("CartPole-v1").env
 
@@ -30,19 +30,26 @@ def custom_loss(batch_scales, batch_states):
 
     return loss
 
-def calc_qvals(rewards, gamma):
+def calc_qvals(rewards, gamma, discounted_reward, step_idx):
     res = []
     sum_r = 0.0
     for r in reversed(rewards):
         sum_r *= gamma
         sum_r += r
         res.append(sum_r)
-    return list(reversed(res))
+    res = list(reversed(res))
+    for i in range(len(res)):
+        discounted_reward += res[i]
+        step_idx = step_idx - len(res) + 1
+        baseline = discounted_reward / step_idx
+        step_idx += 1
+        res[i] -= baseline
+    return res, discounted_reward
 
 
 inputs = Input(shape=(env.observation_space.shape[0],))
-x = Dense(256, activation='relu' ,kernel_regularizer=l2(0.001))(inputs)
-predictions = Dense(env.action_space.n, activation='softmax', kernel_regularizer=l2(0.001))(x)
+x = Dense(128, activation='relu')(inputs)
+predictions = Dense(env.action_space.n, activation='softmax')(x)
 
 model = Model(inputs, predictions)
 
@@ -59,14 +66,14 @@ stats = plotting.EpisodeStats(
         episode_lengths=np.zeros(TOTAL_EPISODES),
         episode_rewards=np.zeros(TOTAL_EPISODES))
 
-
+model.reset_states()
+discounted_reward = 0
+step_idx = 0
 for i in range(1, TOTAL_EPISODES):
 
     state = env.reset()
     epochs, penalties, reward, = 0, 0, 0
     done = False
-    step_idx = 0
-    discounted_reward = 0
 
     while not done:
 
@@ -75,28 +82,26 @@ for i in range(1, TOTAL_EPISODES):
         next_state, reward, done, info = env.step(action)
         batch_states.append(state)
         batch_actions.append(action)
-        discounted_reward *= gamma
-        discounted_reward += reward
 
         stats.episode_rewards[i] += reward
         stats.episode_lengths[i] = epochs
 
-        #mettere il discount qua invece che alla fine dell episodio per calcolare la baseline
-        baseline = discounted_reward / step_idx
-        batch_scales.append(reward - baseline)
+
+        cur_rewards.append(reward)
         state = next_state
         epochs += 1
 
     if i % 100 == 0:
         print("episode", i)
 
-    #batch_scales.extend(calc_qvals(cur_rewards, gamma))
+    res, discounted_reward = calc_qvals(cur_rewards, gamma, discounted_reward, step_idx)
+    batch_scales.extend(res)
     cur_rewards.clear()
     batch_episodes += 1
 
     if i > 100 and i % 10 == 0:
         print("mean last 100: ", np.mean(stats.episode_rewards[i-100:i]))
-        if np.mean(stats.episode_rewards[-100:]) >= 195:
+        if np.mean(stats.episode_rewards[i-100:i]) >= 195:
             print("solved")
             break
 
@@ -105,14 +110,15 @@ for i in range(1, TOTAL_EPISODES):
 
     y = np_utils.to_categorical(batch_actions, env.action_space.n)
     model.compile(optimizer = Adam(lr=0.001), loss = custom_loss(batch_scales, batch_states))
-    model.fit(x=np.array(batch_states).reshape(-1,env.observation_space.shape[0]), y= np.array(y).reshape(-1,env.action_space.n), batch_size=len(batch_states), epochs=2, verbose = 0)
+    model.fit(x=np.array(batch_states).reshape(-1,env.observation_space.shape[0]), y= np.array(y).reshape(-1,env.action_space.n), batch_size=len(batch_states), epochs=3, verbose = 0)
     batch_episodes = 0
     batch_states.clear()
     batch_actions.clear()
     batch_scales.clear()
 
 
+batch_scales
 plotting.plot_episode_stats(stats)
 
-state
-model.predict(np.array([1,1,1,1]).reshape(-1,env.observation_space.shape[0])).squeeze()
+
+model.predict(np.array([12,1,30,-1]).reshape(-1,env.observation_space.shape[0])).squeeze()
