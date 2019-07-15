@@ -38,9 +38,9 @@ def calc_qvals(rewards, gamma, discounted_reward, step_idx):
         sum_r += r
         res.append(sum_r)
     res = list(reversed(res))
+    step_idx = (step_idx - len(res)) + 1
     for i in range(len(res)):
         discounted_reward += res[i]
-        step_idx = step_idx - len(res) + 1
         baseline = discounted_reward / step_idx
         step_idx += 1
         res[i] -= baseline
