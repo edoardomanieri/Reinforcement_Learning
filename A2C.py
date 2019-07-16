@@ -13,16 +13,15 @@ import collections, copy
 import os
 
 GAMMA = 0.99
-LEARNING_RATE = 0.001
+ACTOR_LEARNING_RATE = 0.001
+CRITIC_LEARNING_RATE = 0.01
 ENTROPY_BETA = 0.01
 ACTOR_BATCH_SIZE = 64
 CRITIC_BATCH_SIZE = 16
-NUM_ENVS = 50
 REWARD_STEPS = 50
 SAVE_RENDERING = False
 
 env = gym.make("CartPole-v1").env
-
 
 def policy_loss(adv, states):
 
@@ -73,7 +72,7 @@ critic_inputs = Input(shape=(env.observation_space.shape[0],))
 x = Dense(128, activation='relu')(critic_inputs)
 critic_outputs = Dense(1, activation='linear')(x)
 critic_model = Model(critic_inputs, critic_outputs)
-critic_model.compile(optimizer = Adam(lr=0.01), loss = "mse")
+critic_model.compile(optimizer = Adam(lr=CRITIC_LEARNING_RATE), loss = "mse")
 
 
 
@@ -145,7 +144,7 @@ while not solved:
                 last_states = []
             #reset environment
             state = env.reset()
-            #print("n steps  " + str(step_idx) + " rewards :")
+
             step_idx = 0
             episodes += 1
             solved = check_if_solved(episodes, stats.episode_rewards, 195, env, video)
@@ -153,7 +152,7 @@ while not solved:
             while not len(last_rewards) == 0:
                 discounted_rewards.append(unroll_bellman(copy.copy(last_rewards)))
                 last_rewards.popleft()
-            #print(discounted_rewards)
+
 
         #update the state
         state = next_state
@@ -184,10 +183,9 @@ while not solved:
                                                         batch_size=CRITIC_BATCH_SIZE, epochs=50, verbose = 0)
 
 
-    #print("adv: ")
-    #print(adv)
+
     actor_y = np_utils.to_categorical(input_actions, env.action_space.n)
-    actor_model.compile(optimizer = Adam(lr=0.001), loss = policy_loss(adv, input_states))
+    actor_model.compile(optimizer = Adam(lr=ACTOR_LEARNING_RATE), loss = policy_loss(adv, input_states))
     actor_model.fit(x=np.array(input_states).reshape(-1,env.observation_space.shape[0]),\
                                         y= np.array(actor_y).reshape(-1,env.action_space.n), batch_size=ACTOR_BATCH_SIZE, epochs=1, verbose = 0)
 
