@@ -118,7 +118,3 @@ for i in range(1, TOTAL_EPISODES):
 
 
 batch_scales
-plotting.plot_episode_stats(stats)
-
-
-model.predict(np.array([12,1,30,-1]).reshape(-1,env.observation_space.shape[0])).squeeze()
