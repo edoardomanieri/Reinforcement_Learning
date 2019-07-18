@@ -14,7 +14,7 @@ import tensorflow as tf
 
 class Actor():
 
-    def __init__(self, graph,learning_rate, batch_size, input_shape, output_shape, entropy_beta):
+    def __init__(self,learning_rate, batch_size, input_shape, output_shape, entropy_beta):
         self.graph = tf.Graph()
         self.session = tf.Session(graph=self.graph)
         self.learning_rate = learning_rate
@@ -23,6 +23,9 @@ class Actor():
         self.output_shape = output_shape
         self.entropy_beta = entropy_beta
         self.model = self.build_model()
+
+    def copy(self):
+        return Actor(self.learning_rate, self.batch_size, self.input_shape, self.output_shape, self.entropy_beta)
 
     def policy_loss(self, adv, states):
 
@@ -42,8 +45,6 @@ class Actor():
     def build_model(self):
         with self.graph.as_default():
             with self.session.as_default():
-                init=tf.global_variables_initializer()
-                self.session.run(init)
                 actor_inputs = Input(shape=(self.input_shape,))
                 x = Dense(128, activation='relu')(actor_inputs)
                 actor_outputs = Dense(self.output_shape, activation='softmax')(x)
@@ -54,8 +55,6 @@ class Actor():
     def fit(self, adv, input_states, input_actions):
         with self.graph.as_default():
             with self.session.as_default():
-                init=tf.global_variables_initializer()
-                self.session.run(init)
                 actor_y = np_utils.to_categorical(input_actions, self.output_shape)
                 self.model.compile(optimizer = Adam(lr=self.learning_rate), loss = self.policy_loss(adv, input_states))
                 self.model.fit(x=np.array(input_states).reshape(-1,self.input_shape),\
@@ -64,7 +63,5 @@ class Actor():
     def predict(self, x):
         with self.graph.as_default():
             with self.session.as_default():
-                init=tf.global_variables_initializer()
-                self.session.run(init)
                 y = self.model.predict(x)
         return y

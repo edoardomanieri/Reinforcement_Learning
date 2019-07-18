@@ -29,8 +29,8 @@ class A3C():
         else:
             input_shape = self.envs[0].observation_space.shape[0]
 
-        self.actor = Actor(tf.Graph(),actor_learning_rate, actor_batch_size, input_shape, self.envs[0].action_space.n, entropy_beta)
-        self.critic = Critic(tf.Graph(),critic_learning_rate, critic_batch_size, input_shape, 1)
+        self.actor = Actor(actor_learning_rate, actor_batch_size, input_shape, self.envs[0].action_space.n, entropy_beta)
+        self.critic = Critic(critic_learning_rate, critic_batch_size, input_shape, 1)
         lock = Lock()
         self.threads = [Env_thread("thread" + str(i), lock, self.envs[i], self.actor, self.critic, gamma, max_episodes_per_thread, episode_to_train) for i in range(num_threads)]
 
