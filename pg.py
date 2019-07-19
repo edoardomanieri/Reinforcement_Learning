@@ -20,13 +20,13 @@ def custom_loss(batch_scales, batch_states):
 
     def loss(y_true, y_pred):
         log_prob = K.log(y_pred)[:len(batch_states),:]
-        #entropy = -K.mean(K.sum(y_pred * log_prob, axis = 1))
-        #entropy_loss = -ENTROPY_BETA * entropy
+        entropy = -K.mean(K.sum(y_pred * log_prob, axis = 1))
+        entropy_loss = -ENTROPY_BETA * entropy
         argmax_flat = K.argmax(y_true, axis=1) + [env.action_space.n * _ for _ in range(len(batch_states))]
         log_prob = K.reshape(log_prob, (env.action_space.n*len(batch_states),))
         log_prob = K.gather(log_prob,argmax_flat)
         log_prob_action = K.cast(batch_scales, K.floatx()) * log_prob
-        return -K.sum(log_prob_action) #+ entropy_loss
+        return -K.sum(log_prob_action) + entropy_loss
 
     return loss
 
@@ -84,8 +84,6 @@ for i in range(1, TOTAL_EPISODES):
 
         baseline = stats.episode_rewards[i] / step_idx
         cur_rewards.append(reward - baseline)
-        #print(reward)
-        #print(reward - baseline)
         state = next_state
         epochs += 1
 
