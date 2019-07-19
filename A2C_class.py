@@ -169,6 +169,7 @@ class A2C():
             self.show = False
             self.env.close()
             self.rec.close()
+
         #if the episode has ended we need to remove the final states b\c they don't need the bellman approximation
         if len(self.not_done_idx) > self.reward_steps:
             self.not_done_idx = self.not_done_idx[:len(self.not_done_idx) - self.reward_steps]
@@ -176,11 +177,13 @@ class A2C():
         else:
             self.not_done_idx = []
             self.last_states = []
+
         #reset environment
         self.state = self.env.reset()
         self.step_idx = 0
         self.episodes += 1
         self.check_if_solved()
+
         #Unroll all the rewards since the episode has ended
         while not len(self.last_rewards) == 0:
             self.discounted_rewards.append(self.unroll_bellman(copy.copy(self.last_rewards)))
@@ -188,10 +191,12 @@ class A2C():
 
     def ending_batch(self):
         self.epochs += 1
+
         #keep only ACTOR_BATCH_SIZE rewards
         exceeding_rewards = self.discounted_rewards[self.actor.batch_size:]
         self.discounted_rewards = self.discounted_rewards[:self.actor.batch_size]
         rewards_np = np.array(self.discounted_rewards, dtype=np.float32)
+
         #Use the critic model to estimate value function
         if self.not_done_idx and self.step_idx > self.reward_steps:
             last_vals = self.critic_model.predict(np.array(self.last_states).reshape(-1,self.actor.input_shape)).squeeze()
@@ -199,6 +204,7 @@ class A2C():
         return rewards_np, exceeding_rewards
 
     def compute_advantages(self,rewards_np,exceeding_rewards, input_states):
+
         #putting the exceeding_rewards in the new batch
         self.discounted_rewards = exceeding_rewards
         adv = rewards_np - self.critic_model.predict(np.array(input_states).reshape(-1,self.actor.input_shape)).squeeze()
@@ -239,7 +245,5 @@ class A2C():
             self.free_memory(input_states, input_actions, exceeding_rewards, adv, rewards_np)
 
 cartPole = A2C("CartPole-v1")
-
-#taxi = A2C("LunarLander-v2")
 
 cartPole.a2c_learning()

@@ -2,13 +2,11 @@ from keras.layers import Dense, Input
 from keras.models import Model
 from keras.optimizers import Adam
 from keras.utils import np_utils
-from keras.regularizers import l2
 import gym
 import numpy as np
 import random
 import keras.backend as K
-from keras.layers.core import Lambda
-import plotting
+import  plotting
 import collections, copy
 import tensorflow as tf
 

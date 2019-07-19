@@ -115,6 +115,3 @@ for i in range(1, TOTAL_EPISODES):
     batch_states.clear()
     batch_actions.clear()
     batch_scales.clear()
-
-
-batch_scales

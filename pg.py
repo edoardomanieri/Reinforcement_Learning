@@ -61,7 +61,7 @@ stats = plotting.EpisodeStats(
         episode_rewards=np.zeros(TOTAL_EPISODES))
 
 
-###understand and add baseline!!
+
 for i in range(1, TOTAL_EPISODES):
 
     state = env.reset()
@@ -106,24 +106,3 @@ for i in range(1, TOTAL_EPISODES):
     batch_scales.clear()
 
 plotting.plot_episode_stats(stats)
-
-model.predict([0.1,0.2,0.9])
-batch_scales
-
-batch_scales = [-1,-1,-1, 20]
-def loss(y_true, y_pred):
-    print(y_pred)
-    log_prob = np.log(y_pred)[:4,:]
-    print(log_prob)
-    argmax_flat = np.argmax(y_true, axis=1) + [env.action_space.n * _ for _ in range(4)]
-    log_prob = np.reshape(log_prob, (env.action_space.n*4,))
-    log_prob = log_prob[argmax_flat]
-    print(log_prob)
-    log_prob_action = batch_scales * log_prob
-    print(log_prob_action)
-    return -np.mean(log_prob_action)
-
-loss(np.array([[1,0,0,0,0,0],[1,0,0,0,0,0], [1,0,0,0,0,0], [0,0,0,0,0,1]]),model.predict([0.1,0.2,0.3, 0.5]))
-
-model.predict([0.1,0.2,0.3])
-batch_scales
