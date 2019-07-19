@@ -4,10 +4,11 @@ import plotting
 
 class Env_thread(threading.Thread):
 
-    def __init__(self,name, lock, env, actor, critic,  gamma, max_episodes, episodes_to_train):
+    def __init__(self,name, lock, batch, env, actor, critic,  gamma, max_episodes, episodes_to_train):
         threading.Thread.__init__(self)
         self.name = name
         self.env = env
+        self.batch = batch
         self.actor = actor
         self.critic = critic
         self.lock = lock
@@ -36,20 +37,18 @@ class Env_thread(threading.Thread):
 
         step_idx, batch_episodes, episodes = 0, 0, 0
         batch_states, batch_actions, batch_scales, cur_rewards = [], [], [], []
+        tmp_actor = self.actor.copy()
 
         for i in range(0, self.max_episodes):
 
             state = self.env.reset()
             done = False
 
+
             while not done:
 
                 step_idx += 1
-                print("start waiting..{}".format(self.name))
-                self.lock.acquire()
-                action = np.random.choice([a for a in range(self.actor.output_shape)], p=self.actor.predict(state.reshape(-1,self.actor.input_shape)).squeeze())
-                self.lock.release()
-                print("done {}".format(self.name))
+                action = np.random.choice([a for a in range(self.actor.output_shape)], p=tmp_actor.predict(state.reshape(-1,self.actor.input_shape)).squeeze())
                 next_state, reward, done, info = self.env.step(action)
                 batch_states.append(state)
                 batch_actions.append(action)
@@ -60,11 +59,10 @@ class Env_thread(threading.Thread):
 
 
             episodes += 1
-            if i > 10 and i % 10 == 0:
-                print("mean last 10: ", np.mean(self.stats.episode_rewards[i-10:i]), flush = True)
+            if i > 100 and i % 20 == 0:
+                print("mean last 100: {}, episodes: {}, thread: {}".format(np.mean(self.stats.episode_rewards[i-100:i]), episodes, self.name), flush = True)
 
-            discounted_rewards = self.calc_qvals(cur_rewards)
-            batch_scales.extend(discounted_rewards)
+            batch_scales.extend(self.calc_qvals(cur_rewards))
             cur_rewards.clear()
             batch_episodes += 1
 
@@ -72,11 +70,13 @@ class Env_thread(threading.Thread):
                 continue
 
             self.lock.acquire()
-            print("training...{}".format(self.name))
             adv = batch_scales - self.critic.predict(np.array(batch_states).reshape(-1,self.actor.input_shape)).squeeze()
-            self.critic.fit(np.array(batch_scales), batch_states)
-            self.actor.fit(adv, batch_states, batch_actions)
+            self.batch.put(batch_states, batch_actions, adv, batch_scales)
             self.lock.release()
+
+            #copying the model so that I can predict without acquiring the lock
+            tmp_actor = self.actor.copy()
+            tmp_actor.set_weights(self.actor.get_weights())
 
             batch_episodes = 0
             batch_states.clear()

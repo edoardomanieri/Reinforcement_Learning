@@ -65,3 +65,14 @@ class Actor():
             with self.session.as_default():
                 y = self.model.predict(x)
         return y
+
+    def get_weights(self):
+        with self.graph.as_default():
+            with self.session.as_default():
+                weights = self.model.get_weights()
+        return weights
+
+    def set_weights(self, weights):
+        with self.graph.as_default():
+            with self.session.as_default():
+                self.model.set_weights(weights)
