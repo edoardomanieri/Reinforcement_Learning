@@ -28,4 +28,3 @@ class A3C():
             thread.start()
         for thread in self.threads:
             thread.join()
-            print("joined")

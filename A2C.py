@@ -211,7 +211,6 @@ class A2C():
         return adv
 
 
-
     def free_memory(self, *args):
         for arg in args:
             del arg

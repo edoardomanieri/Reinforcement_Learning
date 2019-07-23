@@ -48,6 +48,8 @@ class Env_thread(threading.Thread):
             while not done:
 
                 step_idx += 1
+                if isinstance(state, int):
+                    state = np.array([state])
                 action = np.random.choice([a for a in range(self.actor.output_shape)], p=tmp_actor.predict(state.reshape(-1,self.actor.input_shape)).squeeze())
                 next_state, reward, done, info = self.env.step(action)
                 batch_states.append(state)
@@ -59,7 +61,7 @@ class Env_thread(threading.Thread):
 
 
             episodes += 1
-            if i > 100 and i % 20 == 0:
+            if i > 100 and i % 10 == 0:
                 print("mean last 100: {}, episodes: {}, thread: {}".format(np.mean(self.stats.episode_rewards[i-100:i]), episodes, self.name), flush = True)
 
             batch_scales.extend(self.calc_qvals(cur_rewards))
@@ -75,8 +77,11 @@ class Env_thread(threading.Thread):
             self.lock.release()
 
             #copying the model so that I can predict without acquiring the lock
-            tmp_actor = self.actor.copy()
-            tmp_actor.set_weights(self.actor.get_weights())
+            try:
+                tmp_actor = self.actor.copy()
+                tmp_actor.set_weights(self.actor.get_weights())
+            except Exception():
+                pass
 
             batch_episodes = 0
             batch_states.clear()

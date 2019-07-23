@@ -9,12 +9,16 @@ import random
 env = gym.make("Taxi-v2").env
 
 inputs = Input(shape=(1,))
-x = Dense(32, activation='relu')(inputs)
-predictions = Dense(env.action_space.n, activation='linear')(x)
+x = Dense(128, activation='relu', kernel_initializer='zero')(inputs)
+predictions = Dense(env.action_space.n, activation='linear',kernel_initializer='zero')(x)
 
 model = Model(inputs, predictions)
 model.compile(optimizer = Adam(), loss = 'mse')
-#model.predict(np.array([10]))
+np.argmax(model.predict(np.array([100])))
+
+
+
+np.random.choice(b[a])
 
 #####All this can be avoided#####
 #dictionary with states as keys and a tuple of as many values as actions, as values
@@ -71,7 +75,7 @@ model.fit(x=np.array(list(q_table.keys())), y = np.array(list(q_table.values()))
 ########################################################
 
 
-
+actions = np.array([a for a in range(env.action_space.n)])
 #####Algorithm with value-function approximation
 
 # Hyperparameters
@@ -100,12 +104,14 @@ for i in range(1, episodes):
     reward_per_episodio = 0
 
     while not done:
+
         old_values = model.predict([int(state)]).squeeze()
-        #print(old_values)
+        best_actions = (old_values) == np.max(old_values)).squeeze()
+
         if random.uniform(0, 1) < epsilon:
             action = env.action_space.sample() # Explore action space
         else:
-            action = np.argmax(old_values) # Exploit learned values
+            action = np.random.choice(actions[best_actions]) # Exploit learned values
 
         next_state, reward, done, info = env.step(action)
         reward_per_episodio += reward
