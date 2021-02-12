@@ -1,3 +1,3 @@
-# Reinforcement_Learning
+# Reinforcement Learning Library
 
-Implementation of some reinforcement learning algorithms and deep reinforcement learning algorithms using keras.
+Implementation of some reinforcement learning algorithms using keras.
